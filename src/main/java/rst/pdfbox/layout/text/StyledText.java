@@ -15,6 +15,7 @@ public class StyledText implements TextFragment {
     private final Color color;
     private final float leftMargin;
     private final float rightMargin;
+    private final float baselineOffset;
 
     /**
      * The cached (calculated) width of the text.
@@ -57,6 +58,25 @@ public class StyledText implements TextFragment {
      * 
      * @param text
      *            the text to draw. Must not contain line feeds ('\n').
+     * @param size
+     *            the size of the font.
+     * @param font
+     *            the font to use.
+     * @param color
+     *            the color to use.
+     * @param baselineOffset
+     *            the offset of the baseline.
+     */
+    public StyledText(final String text, final float size, final PDFont font,
+	    final Color color, final float baselineOffset) {
+	this(text, new FontDescriptor(font, size), color, baselineOffset, 0, 0);
+    }
+
+    /**
+     * Creates a styled text.
+     * 
+     * @param text
+     *            the text to draw. Must not contain line feeds ('\n').
      * @param fontDescriptor
      *            the font to use.
      */
@@ -76,7 +96,7 @@ public class StyledText implements TextFragment {
      */
     public StyledText(final String text, final FontDescriptor fontDescriptor,
 	    final Color color) {
-	this(text, fontDescriptor, color, 0, 0);
+	this(text, fontDescriptor, color, 0, 0, 0);
     }
 
     /**
@@ -88,13 +108,16 @@ public class StyledText implements TextFragment {
      *            the font to use.
      * @param color
      *            the color to use.
+     * @param baselineOffset
+     *            the offset of the baseline.
      * @param leftMargin
      *            the margin left to the text.
      * @param rightMargin
      *            the margin right to the text.
      */
     public StyledText(final String text, final FontDescriptor fontDescriptor,
-	    final Color color, final float leftMargin, final float rightMargin) {
+	    final Color color, final float baselineOffset,
+	    final float leftMargin, final float rightMargin) {
 	if (text.contains("\n")) {
 	    throw new IllegalArgumentException(
 		    "StyledText must not contain line breaks, use TextFragment.LINEBREAK for that");
@@ -110,6 +133,7 @@ public class StyledText implements TextFragment {
 	this.color = color;
 	this.leftMargin = leftMargin;
 	this.rightMargin = rightMargin;
+	this.baselineOffset = baselineOffset;
     }
 
     /**
@@ -141,10 +165,25 @@ public class StyledText implements TextFragment {
     public float getWidthWithoutMargin() throws IOException {
 	return getWidth() - leftMargin - rightMargin;
     }
-    
+
     @Override
     public float getHeight() throws IOException {
 	return getFontDescriptor().getSize();
+    }
+
+    /**
+     * @return the ascent of the associated font.
+     * @throws IOException
+     *             by pdfbox.
+     */
+    public float getAsent() throws IOException {
+	return getFontDescriptor().getSize()
+		* getFontDescriptor().getFont().getFontDescriptor().getAscent()
+		/ 1000;
+    }
+
+    public float getBaselineOffset() {
+	return baselineOffset;
     }
 
     @Override
@@ -185,17 +224,19 @@ public class StyledText implements TextFragment {
     public StyledText inheritAttributes(String text) {
 	return inheritAttributes(text, getLeftMargin(), getRightMargin());
     }
-    
-    public StyledText inheritAttributes(String text, float leftMargin, float rightMargin) {
-	return new StyledText(text, getFontDescriptor(), getColor(), leftMargin, rightMargin);
+
+    public StyledText inheritAttributes(String text, float leftMargin,
+	    float rightMargin) {
+	return new StyledText(text, getFontDescriptor(), getColor(),
+		getBaselineOffset(), leftMargin, rightMargin);
     }
-    
+
     @Override
     public String toString() {
 	return "StyledText [text=" + text + ", fontDescriptor="
 		+ fontDescriptor + ", width=" + width + ", color=" + color
 		+ ", leftMargin=" + leftMargin + ", rightMargin=" + rightMargin
-		+ "]";
+		+ ", baselineOffset=" + baselineOffset + "]";
     }
 
 }

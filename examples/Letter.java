@@ -1,18 +1,16 @@
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import rst.pdfbox.layout.elements.Document;
-import rst.pdfbox.layout.elements.Paragraph;
 import rst.pdfbox.layout.elements.ImageElement;
-import rst.pdfbox.layout.elements.Orientation;
-import rst.pdfbox.layout.elements.PageFormat;
+import rst.pdfbox.layout.elements.Paragraph;
 import rst.pdfbox.layout.elements.VerticalSpacer;
 import rst.pdfbox.layout.elements.render.VerticalLayoutHint;
 import rst.pdfbox.layout.text.Alignment;
 import rst.pdfbox.layout.text.BaseFont;
-import rst.pdfbox.layout.text.Constants;
 import rst.pdfbox.layout.text.Position;
 
 public class Letter {
@@ -22,7 +20,12 @@ public class Letter {
 	float vMargin = 50;
 	Document document = new Document(hMargin, hMargin, vMargin, vMargin);
 
-	ImageElement image = new ImageElement("arrow.png");
+	ImageElement image;
+	if (new File("arrow.png").exists()) {
+	    image = new ImageElement("arrow.png");
+	} else {
+	    image = new ImageElement(Letter.class.getResourceAsStream("/arrow.png"));
+	}
 	image.setWidth(image.getWidth()/7);
 	image.setHeight(image.getHeight()/7);
 	document.add(image, new VerticalLayoutHint(Alignment.Right, 0, 0,
@@ -50,11 +53,11 @@ public class Letter {
 	String text = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, "
 		+ "sed diam nonumy eirmod tempor invidunt ut labore et dolore magna "
 		+ "aliquyam erat, _sed diam_ voluptua. At vero eos et *accusam et justo* "
-		+ "duo dolores et ea rebum.\n\n Stet clita kasd gubergren, no sea takimata "
+		+ "duo dolores et ea rebum.\n\nStet clita kasd gubergren, no sea takimata "
 		+ "sanctus est *Lorem ipsum _dolor* sit_ amet. Lorem ipsum dolor sit amet, "
 		+ "consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt "
 		+ "ut labore et dolore magna aliquyam erat, *sed diam voluptua.\n\n"
-		+ " At vero eos et accusam* et justo duo dolores et ea rebum. Stet clita kasd "
+		+ "At vero eos et accusam* et justo duo dolores et ea rebum. Stet clita kasd "
 		+ "gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\n\n";
 	paragraph = new Paragraph();
 	paragraph.addMarkup(text, 11, BaseFont.Helvetica);

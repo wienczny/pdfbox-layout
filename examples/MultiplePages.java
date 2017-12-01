@@ -3,10 +3,7 @@ import java.io.OutputStream;
 
 import rst.pdfbox.layout.elements.Document;
 import rst.pdfbox.layout.elements.Paragraph;
-import rst.pdfbox.layout.elements.Orientation;
-import rst.pdfbox.layout.elements.PageFormat;
 import rst.pdfbox.layout.text.BaseFont;
-import rst.pdfbox.layout.text.Constants;
 
 public class MultiplePages {
 
@@ -14,11 +11,11 @@ public class MultiplePages {
 	String text1 = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, "
 		+ "sed diam nonumy eirmod tempor invidunt ut labore et dolore magna "
 		+ "aliquyam erat, _sed diam_ voluptua. At vero eos et *accusam et justo* "
-		+ "duo dolores et ea rebum.\n\n Stet clita kasd gubergren, no sea takimata "
+		+ "duo dolores et ea rebum.\n\nStet clita kasd gubergren, no sea takimata "
 		+ "sanctus est *Lorem ipsum _dolor* sit_ amet. Lorem ipsum dolor sit amet, "
 		+ "consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt "
 		+ "ut labore et dolore magna aliquyam erat, *sed diam voluptua.\n\n"
-		+ " At vero eos et accusam* et justo duo dolores et ea rebum. Stet clita kasd "
+		+ "At vero eos et accusam* et justo duo dolores et ea rebum. Stet clita kasd "
 		+ "gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\n\n";
 
 	String text2 = "At *vero eos et accusam* et justo duo dolores et ea rebum."
@@ -70,7 +67,7 @@ public class MultiplePages {
 	document.add(paragraph2);
 
 	final OutputStream outputStream = new FileOutputStream(
-		"multiplePages.pdf");
+		"multiplepages.pdf");
 	document.save(outputStream);
 
     }

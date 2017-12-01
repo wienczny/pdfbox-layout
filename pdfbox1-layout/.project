@@ -17,14 +17,9 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>java</name>
+			<name>src</name>
 			<type>2</type>
-			<location>C:/Users/Ralf/git/pdfbox-layout/src/main/java</location>
-		</link>
-		<link>
-			<name>resources</name>
-			<type>2</type>
-			<location>C:/Users/Ralf/git/pdfbox-layout/src/main/resources</location>
+			<location>C:/Users/Ralf/git/pdfbox-layout/src</location>
 		</link>
 	</linkedResources>
 </projectDescription>

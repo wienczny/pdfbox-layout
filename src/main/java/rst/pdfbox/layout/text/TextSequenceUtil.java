@@ -8,6 +8,8 @@ import org.apache.pdfbox.pdmodel.edit.PDPageContentStream;
 
 import rst.pdfbox.layout.elements.Dividable.Divided;
 import rst.pdfbox.layout.elements.Paragraph;
+import rst.pdfbox.layout.util.Pair;
+import rst.pdfbox.layout.util.WordBreakerFactory;
 
 /**
  * Utility methods for dealing with text sequences.
@@ -72,6 +74,13 @@ public class TextSequenceUtil {
 	    tail.setMaxWidth(flow.getMaxWidth());
 	    tail.setLineSpacing(flow.getLineSpacing());
 	}
+	if (text instanceof Paragraph) {
+	    Paragraph paragraph = (Paragraph) text;
+	    first.setAlignment(paragraph.getAlignment());
+	    first.setApplyLineSpacingToFirstLine(paragraph.isApplyLineSpacingToFirstLine());
+	    tail.setAlignment(paragraph.getAlignment());
+	    tail.setApplyLineSpacingToFirstLine(paragraph.isApplyLineSpacingToFirstLine());
+	}	
 
 	int index = 0;
 	do {
@@ -98,7 +107,7 @@ public class TextSequenceUtil {
 
     /**
      * Word-wraps the given text sequence in order to fit the max width.
-     * 
+     *
      * @param text
      *            the text to word-wrap.
      * @param maxWidth
@@ -113,8 +122,10 @@ public class TextSequenceUtil {
 	float indentation = 0;
 	TextFlow result = new TextFlow();
 	float lineLength = indentation;
+	boolean isWrappedLine = false;
 	for (TextFragment fragment : text) {
 	    if (fragment instanceof NewLine) {
+		isWrappedLine = fragment instanceof WrappingNewLine;
 		result.add(fragment);
 		lineLength = indentation;
 		if (indentation > 0) {
@@ -132,46 +143,104 @@ public class TextSequenceUtil {
 	    } else {
 		TextFlow words = splitWords(fragment);
 		for (TextFragment word : words) {
+		    WordWrapContext context = new WordWrapContext(word,
+			    lineLength, indentation, isWrappedLine);
+		    do {
+			context = wordWrap(context, maxWidth, result);
+		    } while (context.isMoreToWrap());
 
-		    if (lineLength == indentation) {
-			TextFragment[] replaceLeadingBlanks = replaceLeadingBlanks(word);
-			word = replaceLeadingBlanks[0];
-			if (replaceLeadingBlanks.length > 1) {
-			    result.add(replaceLeadingBlanks[1]);
-			}
-		    }
-
-		    FontDescriptor fontDescriptor = word.getFontDescriptor();
-		    float length = word.getWidth();
-
-		    if (maxWidth > 0 && lineLength > indentation
-			    && lineLength + length > maxWidth) {
-			// word exceeds max width, so create new line
-			result.add(new WrappingNewLine(fontDescriptor));
-			if (indentation > 0) {
-			    result.add(new Indent(indentation).toStyledText());
-			}
-			lineLength = indentation;
-		    }
-
-		    if (lineLength == indentation) {
-			TextFragment[] replaceLeadingBlanks = replaceLeadingBlanks(word);
-			word = replaceLeadingBlanks[0];
-			length = word.getWidth();
-			if (replaceLeadingBlanks.length > 1) {
-			    result.add(replaceLeadingBlanks[1]);
-			}
-		    }
-
-		    result.add(word);
-
-		    if (length > 0) {
-			lineLength += length;
-		    }
+		    indentation = context.getIndentation();
+		    lineLength = context.getLineLength();
+		    isWrappedLine = context.isWrappedLine();
 		}
 	    }
 	}
 	return result;
+    }
+
+    private static WordWrapContext wordWrap(final WordWrapContext context,
+	    final float maxWidth, final TextFlow result) throws IOException {
+	TextFragment word = context.getWord();
+	TextFragment moreToWrap = null;
+	float indentation = context.getIndentation();
+	float lineLength = context.getLineLength();
+	boolean isWrappedLine = context.isWrappedLine();
+
+	if (isWrappedLine && lineLength == indentation) {
+	    // start of line, replace leading blanks if
+	    TextFragment[] replaceLeadingBlanks = replaceLeadingBlanks(word);
+	    word = replaceLeadingBlanks[0];
+	    if (replaceLeadingBlanks.length > 1) {
+		result.add(replaceLeadingBlanks[1]);
+	    }
+	}
+
+	FontDescriptor fontDescriptor = word.getFontDescriptor();
+	float length = word.getWidth();
+
+	if (maxWidth > 0 && lineLength + length > maxWidth) {
+	    // word exceeds max width, so create new line
+
+	    // break hard, if the text does not fit in a full (next) line
+	    boolean breakHard = indentation + length > maxWidth;
+	    
+	    Pair<TextFragment> brokenWord = breakWord(word, length, maxWidth
+		    - lineLength, maxWidth - indentation, breakHard);
+	    if (brokenWord != null) {
+		// word is broken
+		word = brokenWord.getFirst();
+		length = word.getWidth();
+		moreToWrap = brokenWord.getSecond();
+
+		result.add(word);
+		if (length > 0) {
+		    lineLength += length;
+		}
+
+	    } else {
+		if (lineLength == indentation) {
+		    // Begin of line and word could now be broke...
+		    // Well, so we have to use it as it is,
+		    // it won't get any better in the next line
+		    result.add(word);
+		    if (length > 0) {
+			lineLength += length;
+		    }
+
+		} else {
+		    // give it another try in a new line, there 
+		    // will be more space.
+		    moreToWrap = word;
+		    if (result.getLast() != null) {
+			// since the current word is not used, take
+			// font descriptor of last line. Otherwise
+			// the line break might be to high
+			fontDescriptor = result.getLast().getFontDescriptor();
+		    }
+		}
+	    }
+
+	    // wrap line only if not empty
+	    if (lineLength > indentation) {
+		// and terminate it with a new line
+		result.add(new WrappingNewLine(fontDescriptor));
+		isWrappedLine = true;
+		if (indentation > 0) {
+		    result.add(new Indent(indentation).toStyledText());
+		}
+		lineLength = indentation;
+	    }
+
+	} else {
+	    // word fits, so just add it
+	    result.add(word);
+	    if (length > 0) {
+		lineLength += length;
+	    }
+	}
+
+	return new WordWrapContext(moreToWrap, lineLength, indentation,
+		isWrappedLine);
     }
 
     /**
@@ -284,19 +353,89 @@ public class TextSequenceUtil {
 		if (index == words.length - 1) {
 		    currentRightMargin = rightMargin;
 		}
-		StyledText styledText = null;
-		if (text instanceof StyledText) {
-		    styledText = ((StyledText) text).inheritAttributes(newWord,
-			    currentLeftMargin, currentRightMargin);
-		} else {
-		    styledText = new StyledText(newWord,
-			    text.getFontDescriptor(), text.getColor(),
-			    currentLeftMargin, currentRightMargin);
-		}
-		result.add(styledText);
+		TextFragment derived = deriveFromExisting(text, newWord,
+			currentLeftMargin, currentRightMargin);
+		result.add(derived);
 	    }
 	}
 	return result;
+    }
+
+    /**
+     * Derive a new TextFragment from an existing one, means use attributes like
+     * font, color etc.
+     * 
+     * @param toDeriveFrom
+     *            the fragment to derive from.
+     * @param text
+     *            the new text.
+     * @param leftMargin
+     *            the new left margin.
+     * @param rightMargin
+     *            the new right margin.
+     * @return the derived text fragment.
+     */
+    protected static TextFragment deriveFromExisting(
+	    final TextFragment toDeriveFrom, final String text,
+	    final float leftMargin, final float rightMargin) {
+	if (toDeriveFrom instanceof StyledText) {
+	    return ((StyledText) toDeriveFrom).inheritAttributes(text,
+		    leftMargin, rightMargin);
+	}
+	return new StyledText(text, toDeriveFrom.getFontDescriptor(),
+		toDeriveFrom.getColor(), 0, leftMargin, rightMargin);
+    }
+
+    private static Pair<TextFragment> breakWord(TextFragment word,
+	    float wordWidth, final float remainingLineWidth, float maxWidth,
+	    boolean breakHard) throws IOException {
+
+	float leftMargin = 0;
+	float rightMargin = 0;
+	if (word instanceof StyledText) {
+	    StyledText styledText = (StyledText) word;
+	    leftMargin = styledText.getLeftMargin();
+	    rightMargin = styledText.getRightMargin();
+	}
+
+	Pair<String> brokenWord = WordBreakerFactory.getWorkBreaker()
+		.breakWord(word.getText(), word.getFontDescriptor(),
+			remainingLineWidth - leftMargin, breakHard);
+	if (brokenWord == null) {
+	    return null;
+	}
+
+	// break at calculated index
+	TextFragment head = deriveFromExisting(word,
+		brokenWord.getFirst(), leftMargin, 0);
+	TextFragment tail = deriveFromExisting(word,
+		brokenWord.getSecond(), 0, rightMargin);
+
+	return new Pair<TextFragment>(head, tail);
+    }
+
+    /**
+     * Returns the width of the character <code>M</code> in the given font.
+     * @param fontDescriptor font and size.
+     * @return the width of <code>M</code>.
+     * @throws IOException by pdfbox
+     */
+    public static float getEmWidth(final FontDescriptor fontDescriptor)
+	    throws IOException {
+	return getStringWidth("M", fontDescriptor);
+    }
+
+    /**
+     * Returns the width of the given text in the given font.
+     * @param text the text to measure.
+     * @param fontDescriptor font and size.
+     * @return the width of given text.
+     * @throws IOException by pdfbox
+     */
+    public static float getStringWidth(final String text,
+	    final FontDescriptor fontDescriptor) throws IOException {
+	return fontDescriptor.getSize()
+		* fontDescriptor.getFont().getStringWidth(text) / 1000;
     }
 
     /**
@@ -311,8 +450,8 @@ public class TextSequenceUtil {
      *            the position of the start of the first line.
      * @param drawListener
      *            the listener to
-     *            {@link DrawListener#drawn(Object, Position, float, float) notify} on
-     *            drawn objects.
+     *            {@link DrawListener#drawn(Object, Position, float, float)
+     *            notify} on drawn objects.
      * @param alignment
      *            how to align the text lines.
      * @param maxWidth
@@ -331,7 +470,7 @@ public class TextSequenceUtil {
 	    final float lineSpacing, final boolean applyLineSpacingToFirstLine)
 	    throws IOException {
 	List<TextLine> lines = wordWrapToLines(text, maxWidth);
-	float targetWidth = getMaxWidth(lines);
+	float maxLineWidth = Math.max(maxWidth, getMaxWidth(lines));
 	Position position = upperLeft;
 	float lastLineHeight = 0;
 	for (int i = 0; i < lines.size(); i++) {
@@ -344,10 +483,9 @@ public class TextSequenceUtil {
 	    }
 	    lastLineHeight = currentLineHeight;
 	    position = position.add(0, -lead);
-	    float offset = getOffset(textLine, targetWidth, alignment);
-	    position = new Position(upperLeft.getX() + offset, position.getY());
-	    textLine.drawText(contentStream, position, alignment, drawListener);
+	    textLine.drawAligned(contentStream, position, alignment, maxLineWidth, drawListener);
 	}
+
     }
 
     /**
@@ -449,4 +587,39 @@ public class TextSequenceUtil {
 	return sum;
     }
 
+    private static class WordWrapContext {
+	private TextFragment word;
+	private float lineLength;
+	private float indentation;
+	boolean isWrappedLine;
+
+	public WordWrapContext(TextFragment word, float lineLength,
+		float indentation, boolean isWrappedLine) {
+	    this.word = word;
+	    this.lineLength = lineLength;
+	    this.indentation = indentation;
+	    this.isWrappedLine = isWrappedLine;
+	}
+
+	public TextFragment getWord() {
+	    return word;
+	}
+
+	public float getLineLength() {
+	    return lineLength;
+	}
+
+	public float getIndentation() {
+	    return indentation;
+	}
+
+	public boolean isWrappedLine() {
+	    return isWrappedLine;
+	}
+
+	public boolean isMoreToWrap() {
+	    return getWord() != null;
+	}
+
+    }
 }

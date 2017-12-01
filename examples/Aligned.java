@@ -4,16 +4,17 @@ import java.io.OutputStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import rst.pdfbox.layout.elements.Document;
-import rst.pdfbox.layout.elements.Orientation;
-import rst.pdfbox.layout.elements.PageFormat;
 import rst.pdfbox.layout.elements.Paragraph;
 import rst.pdfbox.layout.elements.render.VerticalLayoutHint;
 import rst.pdfbox.layout.text.Alignment;
-import rst.pdfbox.layout.text.Constants;
+import rst.pdfbox.layout.util.WordBreakerFactory;
 
 public class Aligned {
 
     public static void main(String[] args) throws Exception {
+	System.setProperty(WordBreakerFactory.WORD_BREAKER_CLASS_PROPERTY, 
+		WordBreakerFactory.LEGACY_WORD_BREAKER_CLASS_NAME);
+	
 	Document document = new Document(40, 60, 40, 60);
 	Paragraph paragraph = new Paragraph();
 	paragraph.addText("This is some left aligned text", 11,

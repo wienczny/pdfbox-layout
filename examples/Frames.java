@@ -21,11 +21,11 @@ public class Frames {
 	String text1 = "{color:#ffffff}Lorem ipsum dolor sit amet, consetetur sadipscing elitr, "
 		+ "sed diam nonumy eirmod tempor invidunt ut labore et dolore magna "
 		+ "aliquyam erat, _sed diam_ voluptua. At vero eos et *accusam et justo* "
-		+ "duo dolores et ea rebum.\n\n Stet clita kasd gubergren, no sea takimata "
+		+ "duo dolores et ea rebum.\n\nStet clita kasd gubergren, no sea takimata "
 		+ "sanctus est *Lorem ipsum _dolor* sit_ amet. Lorem ipsum dolor sit amet, "
 		+ "consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt "
 		+ "ut labore et dolore magna aliquyam erat, *sed diam voluptua.\n\n"
-		+ " At vero eos et accusam* et justo duo dolores et ea rebum. Stet clita kasd "
+		+ "At vero eos et accusam* et justo duo dolores et ea rebum. Stet clita kasd "
 		+ "gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.";
 
 	String text2 = "At *vero eos et accusam* et justo duo dolores et ea rebum. "
@@ -71,14 +71,18 @@ public class Frames {
 	paragraph.addMarkup("Frames also paginate, see here:\n\n", 13, BaseFont.Times);
 	paragraph.addMarkup(text2, 11, BaseFont.Times);
 	paragraph.addMarkup(text2, 11, BaseFont.Times);
-	paragraph.addMarkup(text2, 11, BaseFont.Times);
-	paragraph.addMarkup(text2, 11, BaseFont.Times);
 	frame = new Frame(paragraph, null, null);
 	frame.setShape(new RoundRect(10));
 	frame.setBorder(Color.magenta, new Stroke(3));
 	frame.setBackgroundColor(new Color(255,240,180));
 	frame.setPadding(20, 15, 10, 15);
 	frame.setMargin(50, 50, 20, 10);
+	
+	paragraph = new Paragraph();
+	paragraph.addMarkup(text2, 11, BaseFont.Times);
+	paragraph.addMarkup(text2, 11, BaseFont.Times);
+	frame.add(paragraph);
+
 	document.add(frame);
 
 	final OutputStream outputStream = new FileOutputStream("frames.pdf");
